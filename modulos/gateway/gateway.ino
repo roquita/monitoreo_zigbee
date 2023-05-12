@@ -20,7 +20,7 @@
 #include "zbhci.h"
 QueueHandle_t msg_queue;
 
-// CABECERAS  PARA LED 
+// CABECERAS  PARA LED
 #define CONFIG_BLUE_LIGHT_PIN 3
 
 void setup()
@@ -65,7 +65,7 @@ void loop()
 void zbhciTask(void *pvParameters)
 {
     ts_HciMsg sHciMsg;
-     zbhci_MgmtPermitJoinReq(0xFFFC, 0xFF, 1); // CONECTION ENABLED
+    zbhci_MgmtPermitJoinReq(0xFFFC, 0xFF, 1); // CONECTION ENABLED
 
     while (1)
     {
@@ -113,8 +113,8 @@ void appPowerOn(bool active)
 }
 
 void appHandleZCLreportMsgRcv(ts_MsgZclReportMsgRcvPayload *payload)
-{  
- 
+{
+
     printf("************* appHandleZCLreportMsgRcv ************\n");
     printf("u8SeqNum: %u\n", payload->u8SeqNum);
     printf("u16SrcAddr: %u\n", payload->u16SrcAddr);
@@ -123,14 +123,23 @@ void appHandleZCLreportMsgRcv(ts_MsgZclReportMsgRcvPayload *payload)
     printf("u8AttrNum: %u\n", payload->u8AttrNum);
     switch (payload->u16ClusterId)
     {
-    case 0x0000: // Basic Cluster 
+    case 0x0000: // Basic Cluster
         for (size_t i = 0; i < payload->u8AttrNum; i++)
         {
             printf("---- u8AttrNum:%u ----\n", i);
-            printf("u16AttrID: %u\n", payload->asAttrList[i].u16AttrID);   
-            printf("u8DataType: %u\n", payload->asAttrList[i].u8DataType); 
-            printf("u16DataLen: %u\n", payload->asAttrList[i].u16DataLen); 
-            printf("uAttrData: %u\n", payload->asAttrList[i].uAttrData.u16AttrData);            
+            printf("u16AttrID: %u\n", payload->asAttrList[i].u16AttrID);
+            printf("u8DataType: %u\n", payload->asAttrList[i].u8DataType);
+            printf("u16DataLen: %u\n", payload->asAttrList[i].u16DataLen);
+            //printf("uAttrData: %u\n", payload->asAttrList[i].uAttrData.u16AttrData);
+
+            bool data_is_string = (payload->asAttrList[i].u8DataType == ZCL_DATA_TYPE_CHAR_STR);
+            if (data_is_string)
+            {
+                char data[128] = {0};
+                memcpy(data, payload->asAttrList[i].uAttrData.au8AttrData, 128);
+                data[127] = 0;
+                printf("\"%s\"\n", data);
+            }
         }
         break;
 
@@ -139,4 +148,3 @@ void appHandleZCLreportMsgRcv(ts_MsgZclReportMsgRcvPayload *payload)
         break;
     }
 }
-
