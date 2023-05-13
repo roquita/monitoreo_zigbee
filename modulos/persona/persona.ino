@@ -26,22 +26,6 @@ void loop()
         // ENVIAR INFORMACION DE SENSOR DE CAIDA POR ZIGBEE
         uint16_t caida_detectada = 1;
         zigbee_enviar_16bit_data(ZIGBEE_SENSOR_CAIDA_ID, &caida_detectada);
-        caida_detectada = 0;
-        zigbee_enviar_16bit_data(ZIGBEE_SENSOR_CAIDA_ID, &caida_detectada);
-
-        // RESET SENSOR DE CAIDAS
-        sensor_caidas_reset();
-    }
-
-    if (sensor_boton_de_usuario_presionado())
-    {
-        Serial.println(F("boton_de_usuario_presionado"));
-
-        // ENVIAR INFORMACION DE SENSOR BOTON POR ZIGBEE
-        uint16_t boton_presionado = 1;
-        zigbee_enviar_16bit_data(ZIGBEE_SENSOR_BOTON_ID, &boton_presionado);
-        boton_presionado = 0;
-        zigbee_enviar_16bit_data(ZIGBEE_SENSOR_BOTON_ID, &boton_presionado);
 
         // ENVIAR INFORMACION DE SENSOR TEMPERATURA CORPORAL POR ZIGBEE
         float temperatura_corporal = sensor_temperatura_corporal_leer();
@@ -60,6 +44,18 @@ void loop()
         zigbee_enviar_16bit_data(ZIGBEE_SENSOR_RITMO_CARDIACO_ID, &ritmo_cardiaco);
         zigbee_enviar_16bit_data(ZIGBEE_SENSOR_CONCENTRACION_SPO2_ID, &concentracion_spo2);
 
+        // RESET SENSOR DE CAIDAS
+        sensor_caidas_reset();
+    }
+
+    if (sensor_boton_de_usuario_presionado())
+    {
+        Serial.println(F("boton_de_usuario_presionado"));
+
+        // ENVIAR INFORMACION DE SENSOR BOTON POR ZIGBEE
+        uint16_t boton_presionado = 1;
+        zigbee_enviar_16bit_data(ZIGBEE_SENSOR_BOTON_ID, &boton_presionado);
+
         // RESET SENSOR BOTON
         sensor_boton_de_usuario_reset();
     }
@@ -67,6 +63,10 @@ void loop()
     {
 
         Serial.println(F("periodo_expirado"));
+
+        // ENVIAR INFORMACION DE SENSOR DE CAIDA POR ZIGBEE
+        uint16_t caida_detectada = 0;
+        zigbee_enviar_16bit_data(ZIGBEE_SENSOR_CAIDA_ID, &caida_detectada);
 
         // ENVIAR INFORMACION DE SENSOR TEMPERATURA CORPORAL POR ZIGBEE
         float temperatura_corporal = sensor_temperatura_corporal_leer();

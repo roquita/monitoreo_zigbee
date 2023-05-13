@@ -1,150 +1,64 @@
 
-#include "WiFi.h"
-#include "esp_wifi.h"
-
-// CABECERAS PARA MODULO ZIGBEE TLSR8258
-#include <stdio.h>
-#include <stdbool.h>
-#include "sdkconfig.h"
+#include "Arduino.h"
+#include "zigbee.h"
+#include "connect.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_system.h"
-#include "esp_spi_flash.h"
-#include <string.h>
 #include "freertos/event_groups.h"
-#include "esp_system.h"
-#include "esp_event.h"
-#include "esp_log.h"
-#include "driver/gpio.h"
-#include "esp_system.h"
-#include "zbhci.h"
-QueueHandle_t msg_queue;
-
-// CABECERAS  PARA LED
-#define CONFIG_BLUE_LIGHT_PIN 3
 
 void setup()
 {
     Serial.begin(115200);
-
-    // Setup LED
-    pinMode(CONFIG_BLUE_LIGHT_PIN, OUTPUT);
-    digitalWrite(CONFIG_BLUE_LIGHT_PIN, LOW);
-
-    // Setup MODULO ZIGBEE TLSR8258
-    appPowerInit();
-    msg_queue = xQueueCreate(10, sizeof(ts_HciMsg));
-    // Power on the zigbee chip:
-    //   appPowerOn(true);
-    // Power off the zigbee chip:
-    //   appPowerOn(false);
-    //   zbhci_Deinit();
-    appPowerOn(true);
-    zbhci_Init(msg_queue);
-    delay(100);
-    xTaskCreatePinnedToCore(
-        zbhciTask,
-        "zbhciTask",
-        4096,
-        NULL,
-        5,
-        NULL,
-        ARDUINO_RUNNING_CORE);
-    delay(100);
-    zbhci_NetworkStateReq();
-    delay(100);
-    zbhci_NodesJoinedGetReq(0);
-
-    Serial.println(F("SETUP DONE!!!!"));
+    zigbee_init();
+    connect_wifi();
+    Serial.println(F("GATEWAY SETUP DONE!!!!"));
 }
 
 void loop()
 {
-}
-
-void zbhciTask(void *pvParameters)
-{
-    ts_HciMsg sHciMsg;
-    zbhci_MgmtPermitJoinReq(0xFFFC, 0xFF, 1); // CONECTION ENABLED
-
-    while (1)
+    if (datos_ambiente_recibido)
     {
-        bzero(&sHciMsg, sizeof(sHciMsg));
-        if (xQueueReceive(msg_queue, &sHciMsg, portMAX_DELAY))
-        {
-            switch (sHciMsg.u16MsgType)
-            {
-            case ZBHCI_CMD_BDB_COMMISSION_FORMATION_RSP:
-                Serial.println(F("ZBHCI_CMD_BDB_COMMISSION_FORMATION_RSP"));
-                zbhci_MgmtPermitJoinReq(0xFFFC, 0xFF, 1);
-                break;
+        datos_ambiente_recibido = false;
+        char json[100] = {0};
+        snprintf(json, sizeof(json), "{\"tempAmbient\":%.2f,\"humCama\":\"%s\"}",
+                 sensor_temperatura_ambiental_val, sensor_humedad_de_cama_val == 0 ? "Seco" : "Humedo");
+        printf("json: \"%s\"\n\r", json);
 
-            case ZBHCI_CMD_ZCL_REPORT_MSG_RCV:
-                Serial.println(F("ZBHCI_CMD_ZCL_REPORT_MSG_RCV"));
-                appHandleZCLreportMsgRcv(&sHciMsg.uPayload.sZclReportMsgRcvPayload);
-                break;
-
-            default:
-                Serial.print(F("zbhciTask default: 0x"));
-                Serial.println(sHciMsg.u16MsgType, HEX);
-                break;
-            }
-        }
-        delay(100);
+        // enviar a servidor
+        connect_server(json, "/api/v1/habitacion");
     }
-    vTaskDelete(NULL);
-}
 
-void appPowerInit()
-{
-    pinMode(0, OUTPUT);
-}
-
-void appPowerOn(bool active)
-{
-    if (active)
+    if (datos_pastillero_recibido)
     {
-        digitalWrite(0, HIGH);
+        datos_pastillero_recibido = false;
+        char json[100] = {0};
+        snprintf(json, sizeof(json), "{\"nivelPasti\":%u}", sensor_nivel_de_pastillero_val);
+        printf("json: \"%s\"\n\r", json);
+
+        // enviar a servidor
+        connect_server(json, "/api/v1/pastillero");
     }
-    else
+    if (datos_persona_recibido)
     {
-        digitalWrite(0, LOW);
+        datos_persona_recibido = false;
+        char json[100] = {0};
+        snprintf(json, sizeof(json), "{\"caidaDetect\":%s,\"tempCorpor\":%.2f,\"satOxig\":%u,\"ritmoCardiac\":%u}",
+                 (sensor_caida_val == 1) ? "true" : "false", sensor_temperatura_corporal_val + 0.01,
+                 sensor_concentracion_spo2_val, sensor_ritmo_cardiaco_val);
+        printf("json: \"%s\"\n\r", json);
+
+        // enviar a servidor
+        connect_server(json, "/api/v1/persona");
     }
-}
-
-void appHandleZCLreportMsgRcv(ts_MsgZclReportMsgRcvPayload *payload)
-{
-
-    printf("************* appHandleZCLreportMsgRcv ************\n");
-    printf("u8SeqNum: %u\n", payload->u8SeqNum);
-    printf("u16SrcAddr: %u\n", payload->u16SrcAddr);
-    printf("u8SrcEp: %u\n", payload->u8SrcEp);
-    printf("u16ClusterId: 0x%x\n", payload->u16ClusterId);
-    printf("u8AttrNum: %u\n", payload->u8AttrNum);
-    switch (payload->u16ClusterId)
+    if (boton_emergencia_activado)
     {
-    case 0x0000: // Basic Cluster
-        for (size_t i = 0; i < payload->u8AttrNum; i++)
-        {
-            printf("---- u8AttrNum:%u ----\n", i);
-            printf("u16AttrID: %u\n", payload->asAttrList[i].u16AttrID);
-            printf("u8DataType: %u\n", payload->asAttrList[i].u8DataType);
-            printf("u16DataLen: %u\n", payload->asAttrList[i].u16DataLen);
-            //printf("uAttrData: %u\n", payload->asAttrList[i].uAttrData.u16AttrData);
+        boton_emergencia_activado = false;
+        char json[100] = {0};
+        snprintf(json, sizeof(json), "{\"isActive\":true}");
+        printf("json: \"%s\"\n\r", json);
 
-            bool data_is_string = (payload->asAttrList[i].u8DataType == ZCL_DATA_TYPE_CHAR_STR);
-            if (data_is_string)
-            {
-                char data[128] = {0};
-                memcpy(data, payload->asAttrList[i].uAttrData.au8AttrData, 128);
-                data[127] = 0;
-                printf("\"%s\"\n", data);
-            }
-        }
-        break;
-
-    default:
-        printf("appHandleZCLreportMsgRcv: default\n");
-        break;
+        // enviar a servidor
+        connect_server(json, "/api/v1/boton");
     }
+
+    delay(1);
 }
