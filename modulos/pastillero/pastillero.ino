@@ -12,6 +12,7 @@ void setup()
     periodo_init();
 
     zigbee_init();
+    zigbee_print_info();
 }
 
 void loop()

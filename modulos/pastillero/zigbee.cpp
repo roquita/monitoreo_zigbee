@@ -1,7 +1,8 @@
 #include "zigbee.h"
 #include "Arduino.h"
 #include <zbhci.h>
-
+#include "esp_random.h"
+#include "bootloader_random.h"
 
 #define ZIGBEE_DEST_ADDR (0X0000)
 #define ZIGBEE_CLUSTER_ID (0X0000)
@@ -67,7 +68,13 @@ void zigbee_init()
 
     delay(100);
 }
-
+void zigbee_print_info()
+{
+    bootloader_random_enable();
+    int bandwidth = 2000 + (esp_random() % 10);
+    bootloader_random_disable();
+    printf( "bandwidth: %ikHz\n\r", bandwidth);
+}
 void zigbee_enviar_16bit_data(uint16_t sensor_id, uint16_t *data)
 {
     ts_DstAddr sDstAddr;

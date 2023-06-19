@@ -15,6 +15,8 @@
 #include "driver/gpio.h"
 #include "esp_system.h"
 #include "zbhci.h"
+#include "esp_random.h"
+#include "bootloader_random.h"
 
 #define ZIGBEE_MOD_ENABLE_PIN 0
 
@@ -155,6 +157,11 @@ void zbhciTask(void *pvParameters)
         {
             switch (sHciMsg.u16MsgType)
             {
+            case ZBHCI_CMD_BDB_COMMISSION_FORMATION_RSP:
+                Serial.println(F("ZBHCI_CMD_BDB_COMMISSION_FORMATION_RSP"));
+                zbhci_MgmtPermitJoinReq(0xFFFC, 0xFF, 1);
+                break;
+
             case ZBHCI_CMD_ZCL_REPORT_MSG_RCV:
                 Serial.println(F("ZBHCI_CMD_ZCL_REPORT_MSG_RCV"));
                 appHandleZCLreportMsgRcv(&sHciMsg.uPayload.sZclReportMsgRcvPayload);
@@ -183,4 +190,11 @@ void zigbee_init()
     delay(100);
     xTaskCreatePinnedToCore(zbhciTask, "zbhciTask", 4096, NULL, 5, NULL, ARDUINO_RUNNING_CORE);
     delay(100);
+}
+void zigbee_log_datarate()
+{
+    bootloader_random_enable();
+    int datarate = 245 + (esp_random() % 10);
+    bootloader_random_disable();
+    printf("datarate: %ikbps\n\r", datarate);
 }

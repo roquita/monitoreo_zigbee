@@ -21,3 +21,4 @@ extern uint16_t sensor_boton_de_usuario_val;
 extern volatile bool boton_emergencia_activado;
 
 void zigbee_init();
+void zigbee_log_datarate();

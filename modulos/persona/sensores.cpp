@@ -179,7 +179,7 @@ float sensor_temperatura_corporal_leer()
     float temp_celsius = mv / 10.0;
 
     adc_power_release();
-    return temp_celsius;
+    return temp_celsius*23.0/35.1;
 }
 
 /*
@@ -225,7 +225,7 @@ void sensor_ritmo_cardiaco_y_concentracion_spo2_init()
     byte ledMode = 2;                                                                              // Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
     byte sampleRate = 100;                                                                         // Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
     int pulseWidth = 411;                                                                          // Options: 69, 118, 215, 411
-    int adcRange = 4096;                                                                           // Options: 2048, 4096, 8192, 16384
+    int adcRange = 16384;//4096;                                                                           // Options: 2048, 4096, 8192, 16384
     particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange); // Configure sensor with these settings
 }
 static void _max30102_leer(bool *resultado, uint16_t *ritmo_cardiaco, uint16_t *concentracion_spo2)
@@ -255,10 +255,12 @@ static void _max30102_leer(bool *resultado, uint16_t *ritmo_cardiaco, uint16_t *
         irBuffer[i] = irval;
         particleSensor.nextSample(); // We're finished with this sample so move to next sample
 
+/*
         Serial.print(F("red="));
         Serial.print(redBuffer[i], DEC);
         Serial.print(F(", ir="));
         Serial.println(irBuffer[i], DEC);
+*/
     }
 
     // Continuously taking samples from MAX30102.  Heart rate and SpO2 are calculated every 1 second
@@ -293,7 +295,7 @@ static void _max30102_leer(bool *resultado, uint16_t *ritmo_cardiaco, uint16_t *
     // After gathering 25 new samples recalculate HR and SP02
     maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
 
-    *ritmo_cardiaco = (uint16_t)heartRate;
+    *ritmo_cardiaco = (uint16_t)heartRate*0.4;// ajuste
     *concentracion_spo2 = (uint16_t)spo2;
 
     if (validHeartRate != 1 || validSPO2 != 1)

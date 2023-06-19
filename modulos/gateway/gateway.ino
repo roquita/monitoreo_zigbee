@@ -22,6 +22,7 @@ void loop()
         snprintf(json, sizeof(json), "{\"tempAmbient\":%.2f,\"humCama\":\"%s\"}",
                  sensor_temperatura_ambiental_val, sensor_humedad_de_cama_val == 0 ? "Seco" : "Humedo");
         printf("json: \"%s\"\n\r", json);
+        zigbee_log_datarate();
 
         // enviar a servidor
         connect_server(json, "/api/v1/habitacion");
@@ -33,6 +34,7 @@ void loop()
         char json[100] = {0};
         snprintf(json, sizeof(json), "{\"nivelPasti\":%u}", sensor_nivel_de_pastillero_val);
         printf("json: \"%s\"\n\r", json);
+        zigbee_log_datarate();
 
         // enviar a servidor
         connect_server(json, "/api/v1/pastillero");
@@ -45,6 +47,7 @@ void loop()
                  (sensor_caida_val == 1) ? "true" : "false", sensor_temperatura_corporal_val + 0.01,
                  sensor_concentracion_spo2_val, sensor_ritmo_cardiaco_val);
         printf("json: \"%s\"\n\r", json);
+        zigbee_log_datarate();
 
         // enviar a servidor
         connect_server(json, "/api/v1/persona");
@@ -55,6 +58,7 @@ void loop()
         char json[100] = {0};
         snprintf(json, sizeof(json), "{\"isActive\":true}");
         printf("json: \"%s\"\n\r", json);
+        zigbee_log_datarate();
 
         // enviar a servidor
         connect_server(json, "/api/v1/boton");
